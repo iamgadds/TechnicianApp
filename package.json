@@ -1,0 +1,58 @@
+{
+  "name": "technicianapp",
+  "version": "1.0.1",
+  "description": "Technician Desktop Application",
+  "main": "electron/main.js",
+  "type": "module",
+  "build": {
+    "appId": "com.technicianapp",
+    "productName": "Technician App",
+    "directories": {
+      "buildResources": "build"
+    },
+    "files": [
+      "electron/**/*",
+      "package.json",
+      "node_modules/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "packaged-servers",
+        "to": "packaged-servers",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "electron/public/images/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  },
+  "scripts": {
+    "electron": "electron electron/main.js",
+    "build:next": "cd service-portal-ui && npm run build && cd .. && mkdir -p packaged-servers/next-server && cp -R service-portal-ui/.next/standalone/* packaged-servers/next-server/ && cp -R service-portal-ui/.next/static packaged-servers/next-server/.next/ && cp -R service-portal-ui/public packaged-servers/next-server/",
+    "build:nest": "cd technician-app && npm run build && npx pkg . --out-path ../packaged-servers/nest-server",
+    "build:all": "npm run build:nest && npm run build:next",
+    "build": "electron-builder"
+  },
+  "keywords": [],
+  "author": "Husain. M. Shabbir. Ghadiyali.",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/electron": "^1.6.12",
+    "electron": "^35.1.5",
+    "electron-builder": "^26.0.12",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "is2": "^2.0.9",
+    "kill-port": "^2.0.1",
+    "tcp-port-used": "^1.0.2"
+  }
+}
