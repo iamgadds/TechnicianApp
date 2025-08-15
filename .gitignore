@@ -3,7 +3,7 @@ node_modules/
 */node_modules/
 service-portal-ui/*/node_modules/
 technician-app/*/node_modules/
-technician-app/
+
 
 # Production builds
 service-portal-ui/*/.next/
