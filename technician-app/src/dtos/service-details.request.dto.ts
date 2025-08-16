@@ -16,7 +16,7 @@ export class ServiceDetailsRequest {
         example: 'IC-4001',
       })
       @IsOptional()
-      ItemDetails: string
+      ItemId: string
 
       @ApiProperty({
         type: String,

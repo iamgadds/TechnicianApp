@@ -7,20 +7,20 @@ const useSaveTechnicianDetails = () => {
 
 	const url: string = `${process.env.NEXT_PUBLIC_SERVICE_BASE_URL}${TECHNICIANS.SAVE_TECHNICIAN_DETAILS}`
 	const saveTechnicianDetails = async (
-		requestBody: Technicians
-	): Promise<Technicians | null> => {
+		requestBody: Technicians,
+		mode?: 'add' | 'update' | 'delete'
+	): Promise< Response | null> => {
 		try {
             const requestData = {
                 "data": requestBody,
-                "mode": requestBody.TecId ? "update" : "add"
+                "mode": mode || (requestBody.TecId ? "update" : "add")
             }
 			const res = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(requestData),
-              });
-              const responseData : Technicians = await res.json();
-			return responseData
+              });              
+			return res
 		} catch (err) {
 			console.error("Error on save technicians", err);
 			return null;

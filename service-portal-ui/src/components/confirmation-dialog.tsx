@@ -60,7 +60,7 @@ export const ConfirmationDialog = ({
 						onClick={() => handleItemClick(true)}
 						size="small"
 						variant="contained"
-						color="primary"
+						color={typeof content === 'string' && (content?.includes("delete") || content?.includes("rejected")) ? "error" : "primary"}
 						autoFocus
 					>
 						{confirmText || "Confirm"}

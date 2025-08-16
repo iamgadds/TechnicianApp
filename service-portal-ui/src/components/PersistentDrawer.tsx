@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Add, Dashboard, People } from '@mui/icons-material';
+import { Add, Dashboard, People, DeveloperBoard } from '@mui/icons-material';
 import Box from '@mui/material/Box';
 import Link from 'next/link';
 import { AppBar, CssBaseline, Divider, Drawer, IconButton, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Toolbar, Typography, useMediaQuery, useTheme } from '@mui/material';
@@ -24,6 +24,7 @@ const PersistentDrawer = ({ children } : PersistentDrawerProps)  => {
     { text: 'Add Service', icon: <Add />, path: '/add-service' },
     { text: 'Dashboard', icon: <Dashboard />, path: '/service-dashboard' },
     { text: 'Technicians', icon: <People />, path: '/technicians' },
+    { text: 'Item Details', icon: <DeveloperBoard />, path: '/items' },
   ];
 
   const drawer = (

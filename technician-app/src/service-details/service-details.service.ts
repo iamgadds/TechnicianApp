@@ -16,14 +16,15 @@ export class ServiceDetailsService {
         const { Page = 1, PageSize = 10 } = request;
 
         const queryBuilder = this.serviceRepo.createQueryBuilder('serviceDetails')
-        .leftJoinAndSelect('serviceDetails.Technician', 'technician');
-      
+        .leftJoinAndSelect('serviceDetails.Technician', 'technician')
+        .leftJoinAndSelect('serviceDetails.Item', 'item');
+
         if (request.SvdId) {
           queryBuilder.andWhere('serviceDetails.SvdId = :id', { id: request.SvdId });
         }
-      
-        if (request.ItemDetails) {
-          queryBuilder.andWhere('serviceDetails.ItemDetails LIKE :item', { item: `%${request.ItemDetails}%` });
+
+        if (request.ItemId) {
+          queryBuilder.andWhere('serviceDetails.ItemId = :itemId', { itemId: request.ItemId });
         }
       
         if (request.FaultMessage) {

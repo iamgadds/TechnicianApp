@@ -4,4 +4,5 @@ export interface Technicians {
   MobileNumber?: string;
   IsDeleted?: boolean;
   TotalServices?: number;
+  ResolvedServices?: number;
 }
