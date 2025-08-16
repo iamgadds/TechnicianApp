@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Box,
   TextField,
@@ -11,16 +11,17 @@ import {
   Grid,
   Divider,
   Alert,
+  Snackbar,
 } from '@mui/material';
-import { ServiceDetails, Technicians } from '@/interfaces';
+import { Items, ServiceDetails, Technicians } from '@/interfaces';
 import useGetTechniciansDetails from '@/hooks/useGetTechniciansDetails';
 import useSaveTechnicianDetails from '@/hooks/useSaveTechnicians';
 import useSaveServiceDetails from '@/hooks/useSaveServiceDetails';
-import { GetLabelZPL, ServiceStatusEnum } from '@/lib';
+import { GetLabelZPL, getWhatsAppMessage, ServiceStatusEnum } from '@/lib';
 import { Constants } from '@/constants';
-import useSendWhatsappMessage from '@/hooks/useSendWhatsappMessage';
-import { SendWhatsappMessageRequest } from '@/interfaces/send-whatsapp.request.dto';
 import { useZebraPrinter } from '@/hooks/useZebraPrinter';
+import useGetItemDetails from '@/hooks/useGetItemDetails';
+import useSaveItemDetails from '@/hooks/useSaveItemsDetails';
 
 declare global {
   interface Window {
@@ -29,47 +30,28 @@ declare global {
 }
 
 const AddService = () => {
+  const itemNameRef = useRef<HTMLInputElement>(null);
+
   const [selectedTech, setSelectedTech] = useState<Technicians>({
     MobileNumber: '',
     Name: ''
   });
-
-  const [itemName, setItemName] = useState('');
   const [faultMessage, setFaultMessage] = useState('');
   const [forceReload, setForceReload] = useState<boolean>(false)
   const {data : technicians, loading} = useGetTechniciansDetails(null, forceReload)
   const { saveTechnicianDetails } = useSaveTechnicianDetails();
   const { saveServiceDetails } = useSaveServiceDetails();
-  const [errors, setErrors] = useState({
-    itemName: false,
-    faultMessage: false,
-  });
+  const [errors, setErrors] = useState({});
   const [alertMessage, setAlertMessage] = useState<string | null>(null);
 	const [openAlert, setOpenAlert] = useState(false);
-  const { sendWhatsappMessage } = useSendWhatsappMessage();
   const { print }  = useZebraPrinter();
-
-  // function initPrinter() {
-  //   if (!window.BrowserPrint) {
-  //     alert('BrowserPrint SDK not loaded.');
-  //     return;
-  //   }
-
-  //   window.BrowserPrint.getDefaultDevice('printer', (device: any) => {
-  //     setPrinter(device);
-  //   }, (err: any) => {
-  //     console.error('Printer detection failed', err);
-  //   });
-  // }
-
-  // function handlePrint(zpl: string) {
-  //   if (!printer) return alert('No printer found');
-  //   printer.send(zpl, () => {
-  //     console.log('Sent to printer');
-  //   }, (err: any) => {
-  //     console.error('Print failed', err);
-  //   });
-  // }
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const [selectedItem, setSelectedItem] = useState<Items>({
+    ItemName: '',
+  });
+  const [forceReloadItems, setForceReloadItems] = useState<boolean>(false);
+  const { data: itemsList, loading: itemsLoading } = useGetItemDetails(null, forceReloadItems);
+  const { saveItemDetails } = useSaveItemDetails();
 
   useEffect(() => {
     setForceReload(true);
@@ -77,51 +59,83 @@ const AddService = () => {
   }, []);
 
   const handleReset = () => {
-    setItemName('');
     setFaultMessage('');
     setSelectedTech({
       Name: '',
       MobileNumber: ''
     });
+    setSelectedItem({
+      ItemName: '',
+    });
+    itemNameRef.current?.focus();
+
   };
 
   const handleSave = async () => {
     console.log('Handle Save start: selected Tech-', selectedTech)
-    if (selectedTech.Name === '' || selectedTech.MobileNumber === '') return;
+    if (selectedTech.Name === '' || selectedTech.MobileNumber === '' || selectedItem.ItemName === '') return;
 
      const newErrors = {
-      itemName: !itemName.trim(),
       faultMessage: !faultMessage.trim(),
+      mobileNumber: !/^[6-9]\d{9}$/.test(selectedTech.MobileNumber || ''),
     };
     setErrors(newErrors);
 
-    if (newErrors.itemName || newErrors.faultMessage) {
-      return; 
+    if (newErrors.faultMessage || newErrors.mobileNumber) {
+      return;
     }
     console.log('selected Tech: ', selectedTech)
     let finalTech = selectedTech
-    if(!selectedTech.TecId){
-      const techSave = await saveTechnicianDetails(selectedTech)
-      console.log('techSave: ', techSave)
-      if(techSave){
-        finalTech = { ...selectedTech, TecId: techSave.TecId };
-        setSelectedTech(finalTech); 
+    let finalItem = selectedItem;
+    try{
+      if(!selectedTech.TecId){
+        const techSave = await saveTechnicianDetails(selectedTech)
+        console.log('techSave: ', techSave)
+        if(techSave?.ok){
+          const responseData : Technicians = await techSave.json();
+          finalTech = { ...selectedTech, TecId: responseData.TecId };
+          setSelectedTech(finalTech); 
+        }
+        else if (!techSave?.ok){
+            const errorData = await techSave?.json();
+            throw new Error(errorData.message || 'Failed to insert technician');
+        }
       }
-      else{
-        return;
+      if (!finalItem.ItemId && selectedItem.ItemName.trim()) {
+        // If item doesn't exist already, save it
+        const saveResp = await saveItemDetails({ ItemName: selectedItem.ItemName.trim() }, "add");
+        if (saveResp && saveResp.ok) {
+          const responseData: Items = await saveResp.json();
+          finalItem = responseData;
+          setSelectedItem(finalItem);
+          setForceReloadItems((prev) => !prev); // refetch list
+        }
+        else if (!saveResp?.ok){
+            const errorData = await saveResp?.json();
+            throw new Error(errorData.message || 'Failed to insert item');
+        }
       }
     }
+    catch (error : any){
+       setSnackbar({
+      open: true,
+      message: error?.message || 'Error in saving service details.',
+      severity: 'error'
+      });
+      return;
+    }
+
     const payload : ServiceDetails = {
-      ItemDetails: itemName,
+      ItemId: finalItem.ItemId,
       FaultMessage: faultMessage,
       TecId: finalTech.TecId,
       IsDeleted: false,
       Status: ServiceStatusEnum.ACTIVE
     };
+    try{
+      const serviceResp = await saveServiceDetails(payload);
 
-    const serviceResp = await saveServiceDetails(payload);
-
-    if(serviceResp){
+      if(serviceResp){
       setOpenAlert(true);
       setAlertMessage(Constants.ServiceDetailsSaveSuccess);
       setForceReload(!forceReload); 
@@ -132,11 +146,19 @@ const AddService = () => {
     else{
       setAlertMessage(Constants.ServiceDetailsSaveFailed);
     }    
+    }
+    catch{
+      setAlertMessage(Constants.ServiceDetailsSaveFailed);
+      return;
+    }
+    
+
+    
   };
 
   const sendWhatsappMessageToTechnician = () => {
   const phone = selectedTech?.MobileNumber;
-  const message = "Hello *" +selectedTech.Name + "*, your request *#" + itemName + "* has been successfully received for servicing. \nOnce the work is completed, `you will receive another message to come and pick it up.`";
+  const message = getWhatsAppMessage(selectedTech?.Name || '', selectedItem?.ItemName || '', ServiceStatusEnum.ACTIVE);
 
   if (phone) {
     const url = `https://wa.me/91${phone}?text=${encodeURIComponent(message)}`;
@@ -147,7 +169,7 @@ const AddService = () => {
 
   const printLabel = () => {
     console.log('Triggering label print...');
-    const zpl = GetLabelZPL(selectedTech?.Name || '', itemName, faultMessage, selectedTech?.MobileNumber || '');
+    const zpl = GetLabelZPL(selectedTech?.Name || '', selectedItem?.ItemName, faultMessage, selectedTech?.MobileNumber || '');
     print(zpl);
   };
 
@@ -156,6 +178,9 @@ const AddService = () => {
 
   const getTechByName = (name: string) =>
     technicians.find((tech) => tech.Name === name);
+
+  const getItemByName = (name: string) =>
+    itemsList?.data?.find((item) => item.ItemName === name);
 
   return (
     <Box p={3}>
@@ -191,12 +216,23 @@ const AddService = () => {
         <Grid container spacing={3} mt={1}>
           {/* Item Details */}
           <Grid item xs={12} sm={6}>
-            <TextField
-              fullWidth
-              label="Item Name"
-              value={itemName}
-              required
-              onChange={(e) => setItemName(e.target.value)}
+            <Autocomplete
+              options={itemsList?.data?.map((item) => item.ItemName) || []}
+              value={selectedItem?.ItemName || ''}
+              freeSolo // allow new item entry
+              onInputChange={(_, value) => {
+                const match = getItemByName(value || '');
+                setSelectedItem(match || { ...selectedItem, ItemName: value, ItemId: undefined });
+              }}
+              onChange={(_, value) => {
+                const match = getItemByName(value || '');
+                setSelectedItem(match || { ...selectedItem, ItemName: '', ItemId: undefined });
+              }}
+              loading={itemsLoading}
+              renderInput={(params) => (
+                <TextField {...params} label="Item Name" fullWidth required 
+                inputRef={itemNameRef} />
+              )}
             />
           </Grid>
 
@@ -310,6 +346,16 @@ const AddService = () => {
         </Grid>
         </form>
       </Paper>
+       {/* Snackbar for notifications */}
+            <Snackbar
+              open={snackbar.open}
+              autoHideDuration={3000}
+              onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+            >
+              <Alert severity={snackbar.severity === 'success' ? 'success' : 'error'} onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}>
+                {snackbar.message}
+              </Alert>
+            </Snackbar>
     </Box>
   );
 };

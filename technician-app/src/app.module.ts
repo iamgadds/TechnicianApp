@@ -9,6 +9,7 @@ import { TwilioModule } from './twilio/twilio.module';
 import { join } from 'path';
 import { existsSync, mkdirSync } from 'fs';
 import { homedir } from 'os';
+import { ItemModule } from './item/item.module';
 
 // Function to get writable database path
 function getDatabasePath(): string {
@@ -45,6 +46,7 @@ function getDatabasePath(): string {
     TechnicianModule,
     ServiceDetailsModule,
     TwilioModule,
+    ItemModule,
 ],
   controllers: [AppController],
   providers: [AppService],

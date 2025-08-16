@@ -20,11 +20,11 @@ import {
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import { useEffect, useState } from 'react';
 import useGetTechniciansDetails from '@/hooks/useGetTechniciansDetails';
-import { ServiceDetails, ServiceDetailsRequest, TechnicianDetailRequest, Technicians } from '@/interfaces';
+import { ItemDetailRequest, Items, ServiceDetails, ServiceDetailsRequest, TechnicianDetailRequest, Technicians } from '@/interfaces';
 import useGetServiceDetails from '@/hooks/useGetServiceDetails';
 import CheckCircleOutlineOutlinedIcon from '@mui/icons-material/CheckCircleOutlineOutlined';
 import CancelOutlinedIcon from '@mui/icons-material/CancelOutlined';
-import { AvatarName, getContrastColor, getInitials, GetLabelZPL, getStatusColor, ServiceStatusEnum, stringToColor } from '@/lib';
+import { AvatarName, getContrastColor, getInitials, GetLabelZPL, getStatusColor, getWhatsAppMessage, ServiceStatusEnum, stringToColor } from '@/lib';
 import useSaveServiceDetails from '@/hooks/useSaveServiceDetails';
 import { ConfirmationDialog } from '@/components';
 import PaginationFooter from '@/components/pagination-footer';
@@ -33,6 +33,7 @@ import useSendWhatsappMessage from '@/hooks/useSendWhatsappMessage';
 import PrintIcon from '@mui/icons-material/Print';
 import PrintDisabledIcon from '@mui/icons-material/PrintDisabled';
 import { useZebraPrinter } from '@/hooks/useZebraPrinter';
+import useGetItemDetails from '@/hooks/useGetItemDetails';
 
 
 export default function ServiceDashboard() {
@@ -52,6 +53,9 @@ export default function ServiceDashboard() {
   const [confirmationContent, setConfirmationContent] = useState<string>('');
   const { sendWhatsappMessage } = useSendWhatsappMessage();
   const {isReady, print} = useZebraPrinter();
+  const [selectedItem, setSelectedItem] = useState<Items | null>(null);
+  const [itemFilter] = useState<ItemDetailRequest | null>(null);
+  const { data : itemRes, loading : itemsLoading } = useGetItemDetails(itemFilter, forceReload);
 
   const statuses = [
     { value: '', label: 'All' }, 
@@ -86,11 +90,12 @@ export default function ServiceDashboard() {
       MobileNumber: '',
       Name: ''
     });
+    setSelectedItem(null);
   };
 
   const handleServiceDetailRequest = () => {
     setServiceDetailRequest({
-      ItemDetails: serviceName,
+      ItemId: selectedItem?.ItemId || 0,
       TecId: selectedTechnician?.TecId,
       Status: status,
       Page: 1,
@@ -98,9 +103,9 @@ export default function ServiceDashboard() {
     })
   }
 
-    const sendWhatsappMessageToTechnician = () => {
-  const phone = selectedService?.Technician?.MobileNumber; 
-  const message = "Hello *" + selectedService?.Technician?.Name + "*, the servicing of your Service *#" + selectedService?.ItemDetails + "* is now complete. \n`You may come and collect it at your convenience.` \nThank you!"
+    const sendWhatsappMessageToTechnician = (status: ServiceStatusEnum) => {
+    const phone = selectedService?.Technician?.MobileNumber; 
+    const message = getWhatsAppMessage(selectedService?.Technician?.Name || '', selectedService?.Item?.ItemName || '', status);
 
   if (phone) {
     const url = `https://wa.me/91${phone}?text=${encodeURIComponent(message)}`;
@@ -118,9 +123,8 @@ export default function ServiceDashboard() {
         };
     
         const response = await saveServiceDetails(payload);
-        if(isSelectedStatusResolve){
-          sendWhatsappMessageToTechnician();
-        }
+        
+        sendWhatsappMessageToTechnician(isSelectedStatusResolve ? ServiceStatusEnum.RESOLVED : ServiceStatusEnum.REJECTED);
 				setSelectedService(null);
         setIsSelectedStatusResolve(null);
 
@@ -142,7 +146,7 @@ export default function ServiceDashboard() {
 
   const handlePrint = (details: ServiceDetails | null) =>{
     if(details && isReady){
-      const zpl = GetLabelZPL(details?.Technician?.Name || '', details?.ItemDetails || '', details?.FaultMessage || '', details?.Technician?.MobileNumber || '');
+      const zpl = GetLabelZPL(details?.Technician?.Name || '', details?.Item?.ItemName || '', details?.FaultMessage || '', details?.Technician?.MobileNumber || '');
       print(zpl);
     }
   }
@@ -178,12 +182,14 @@ export default function ServiceDashboard() {
             />
           </Grid>
           <Grid item xs={12} md={3}>
-            <TextField
-              label="Service Name"
-              fullWidth
-              value={serviceName}
-              onChange={(e) => setServiceName(e.target.value)}
+            <Autocomplete
+              options={itemRes?.data || []}
+              value={selectedItem}
+              onChange={(_, val) => {setSelectedItem(val)}}
+              getOptionLabel={(option) => `${option.ItemName}`}
+              isOptionEqualToValue={(option, value) => option.ItemId === value?.ItemId}
               size='small'
+              renderInput={(params) => <TextField {...params} label="Item" />}
             />
           </Grid>
           <Grid item xs={12} md={3}>
@@ -214,9 +220,9 @@ export default function ServiceDashboard() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {result?.data.map((row: ServiceDetails) => (
+            {result?.data?.map((row: ServiceDetails) => (
               <TableRow key={row.SvdId}>
-                <TableCell>{row.ItemDetails || "-"}</TableCell>
+                <TableCell>{row.Item?.ItemName || "-"}</TableCell>
                 <TableCell>
                     <Box display='flex' alignItems='center'>
                     <AvatarName

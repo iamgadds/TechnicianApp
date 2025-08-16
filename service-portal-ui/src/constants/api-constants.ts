@@ -11,3 +11,8 @@ export const SERVICE_DETAILS = {
 export const TWILIO = {
     SEND_WHATSAPP_MESSAGE: '/twilio/send-whatsapp-message'
 }
+
+export const ITEMS = {
+  GET_ITEM_DETAILS: "/item/get-item-details",
+  SAVE_ITEM_DETAILS: "/item/saveItemDetails",
+}

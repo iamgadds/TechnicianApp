@@ -1,6 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { Technician } from './technician.entity';
 import { ServiceStatusEnum } from 'src/lib';
+import { Item } from './item.entity';
 
 
 @Entity()
@@ -8,8 +9,12 @@ export class ServiceDetails {
   @PrimaryGeneratedColumn()
   SvdId: number;
 
+  @ManyToOne(() => Item, { eager: true })
+  @JoinColumn({ name: 'ItemId' })
+  Item: Item;
+
   @Column()
-  ItemDetails: string;
+  ItemId: number;
 
   @Column()
   FaultMessage: string;

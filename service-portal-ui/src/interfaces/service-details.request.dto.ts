@@ -1,6 +1,6 @@
 export class ServiceDetailsRequest {
+      ItemId?: number;
       SvdId?: string
-      ItemDetails?: string
       FaultMessage?: string
       Status?: string
       DueDate?: Date
