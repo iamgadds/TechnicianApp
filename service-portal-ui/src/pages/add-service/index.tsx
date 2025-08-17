@@ -261,8 +261,7 @@ const AddService = () => {
               freeSolo // <-- this allows free typing
               disableClearable // optional: disables the X clear button
               onInputChange={(e, value) => {
-                const match = getTechByName(value || '');
-                setSelectedTech(match || { ...selectedTech, Name: value, TecId: undefined });
+                setSelectedTech({ ...selectedTech, Name: value });
                 console.log('Changing Selected Tech on selection: ', selectedTech)
               }}
               onChange={(e, value) => {
@@ -294,8 +293,7 @@ const AddService = () => {
               freeSolo // <-- this allows free typing
               disableClearable // optional: disables the X clear button
               onInputChange={(e, value) => {
-                const match = getTechByNumber(value || '');
-                setSelectedTech(match || { ...selectedTech, MobileNumber: value, TecId: undefined });
+                setSelectedTech({ ...selectedTech, MobileNumber: value});
               }}
               onChange={(e, value) => {
                 const match = getTechByNumber(value || '');
