@@ -56,6 +56,7 @@ export default function ServiceDashboard() {
   const [selectedItem, setSelectedItem] = useState<Items | null>(null);
   const [itemFilter] = useState<ItemDetailRequest | null>(null);
   const { data : itemRes, loading : itemsLoading } = useGetItemDetails(itemFilter, forceReload);
+  const [resetCount, setResetCount] = useState(0);
 
   const statuses = [
     { value: '', label: 'All' }, 
@@ -84,24 +85,32 @@ export default function ServiceDashboard() {
 
 
   const resetFilters = () => {
-    setServiceName('');
     setStatus('');
-    setSelectedTechnician({
-      MobileNumber: '',
-      Name: ''
-    });
+    setSelectedTechnician(null);
     setSelectedItem(null);
-  };
-
-  const handleServiceDetailRequest = () => {
-    setServiceDetailRequest({
-      ItemId: selectedItem?.ItemId || 0,
-      TecId: selectedTechnician?.TecId,
-      Status: status,
+    setPage(1);
+    setRowsPerPage(10);
+    setResetCount(c => c + 1);
+     setServiceDetailRequest({
       Page: 1,
       PageSize: 10,
-    })
-  }
+      ItemId:  undefined,
+      TecId: undefined,
+      Status: undefined
+    });
+  };
+    useEffect(() => {
+  const handleEsc = (event: KeyboardEvent) => {
+    if (event.key === "Escape") {
+      resetFilters();
+    }
+  };
+
+  window.addEventListener("keydown", handleEsc);
+
+  // Cleanup on unmount
+  return () => window.removeEventListener("keydown", handleEsc);
+}, []);
 
     const sendWhatsappMessageToTechnician = (status: ServiceStatusEnum) => {
     const phone = selectedService?.Technician?.MobileNumber; 
@@ -160,7 +169,13 @@ export default function ServiceDashboard() {
               fullWidth
               native
               value={status}
-              onChange={(e) => setStatus(e.target.value)}
+              onChange={(e) => {
+                setStatus(e.target.value)
+                 setServiceDetailRequest({
+                  ...serviceDetailRequest,
+                  Status: e.target.value,
+                });
+              }}
               size='small'
             >
               {statuses.map((s) => (
@@ -172,20 +187,35 @@ export default function ServiceDashboard() {
           </Grid>
           <Grid item xs={12} md={3}>
             <Autocomplete
-              options={technicians}
-              value={selectedTechnician}
-              onChange={(_, val) => {setSelectedTechnician(val)}}
+              key={resetCount}
+              options={technicians || []}
+              value={selectedTechnician || null}
+              onChange={(_, val) => {
+                setSelectedTechnician(val)
+                setServiceDetailRequest({
+                  ...serviceDetailRequest,
+                  Page: 1,
+                  TecId: val?.TecId || undefined,
+                });
+              }}
               getOptionLabel={(option) => `${option.Name} (${option.MobileNumber})`}
               isOptionEqualToValue={(option, value) => option.MobileNumber === value?.MobileNumber}
               size='small'
-              renderInput={(params) => <TextField {...params} label="Technician" />}
+              renderInput={(params) => <TextField {...params} label="Technician"  />}
             />
           </Grid>
           <Grid item xs={12} md={3}>
             <Autocomplete
               options={itemRes?.data || []}
               value={selectedItem}
-              onChange={(_, val) => {setSelectedItem(val)}}
+              onChange={(_, val) => {
+                setSelectedItem(val)
+                 setServiceDetailRequest({
+                  ...serviceDetailRequest,
+                  Page: 1,
+                  ItemId: val?.ItemId || undefined,
+                });
+              }}
               getOptionLabel={(option) => `${option.ItemName}`}
               isOptionEqualToValue={(option, value) => option.ItemId === value?.ItemId}
               size='small'
@@ -193,10 +223,7 @@ export default function ServiceDashboard() {
             />
           </Grid>
           <Grid item xs={12} md={3}>
-            <Button variant="contained" onClick={handleServiceDetailRequest} sx={{ mr: 1 }} size='small'>
-              Search
-            </Button>
-            <Button variant="outlined" color='secondary' onClick={resetFilters} size='small'>
+            <Button variant="outlined" color='secondary' onClick={resetFilters} size='medium'>
               Reset
             </Button>
           </Grid>
@@ -212,6 +239,7 @@ export default function ServiceDashboard() {
           <TableHead>
             <TableRow>
             <TableCell sx={{ fontWeight: 'bold' }}>Service Name</TableCell>
+            <TableCell sx={{ fontWeight: 'bold', maxWidth: 200 }}>Fault Message</TableCell>
             <TableCell sx={{ fontWeight: 'bold' }}>Technician Name</TableCell>
             <TableCell sx={{ fontWeight: 'bold' }}>Created On</TableCell>
             <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
@@ -223,6 +251,19 @@ export default function ServiceDashboard() {
             {result?.data?.map((row: ServiceDetails) => (
               <TableRow key={row.SvdId}>
                 <TableCell>{row.Item?.ItemName || "-"}</TableCell>
+                <TableCell
+  sx={{
+    maxWidth: 200,      // Set your max width here
+    overflowWrap: 'break-word', // Fallback for wrapping
+    whiteSpace: 'pre-wrap',     // Preserves line breaks and wraps lines
+    wordBreak: 'break-word',    // Ensures long words break
+  }}
+>
+  <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+    {row.FaultMessage || "-"}
+  </Typography>
+</TableCell>
+
                 <TableCell>
                     <Box display='flex' alignItems='center'>
                     <AvatarName
