@@ -38,7 +38,7 @@ function getDatabasePath(): string {
     type: 'sqlite',
     database: getDatabasePath(),//'service.db', //!changed from service.db
     entities: [__dirname + '/**/*.entity{.ts,.js}'],
-    synchronize: process.env.NODE_ENV !== 'production', // Turn off in production!
+    synchronize: true, // Turn off in production!
     migrationsRun: true, // ✅ Auto-run migrations
     migrations: [__dirname + '/migrations/**/*{.ts,.js}'],
     autoLoadEntities: true,

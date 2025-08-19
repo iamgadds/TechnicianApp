@@ -1,6 +1,6 @@
 {
   "name": "technicianapp",
-  "version": "1.0.1",
+  "version": "2.0.1",
   "description": "Technician Desktop Application",
   "main": "electron/main.js",
   "type": "module",
