@@ -114,7 +114,7 @@ export default function ServiceDashboard() {
 
     const sendWhatsappMessageToTechnician = (status: ServiceStatusEnum) => {
     const phone = selectedService?.Technician?.MobileNumber; 
-    const message = getWhatsAppMessage(selectedService?.Technician?.Name || '', selectedService?.Item?.ItemName || '', status);
+    const message = getWhatsAppMessage(selectedService?.Technician?.Name || '', selectedService?.Item?.ItemName || '', status, selectedService?.FaultMessage || '');
 
   if (phone) {
     const url = `https://wa.me/91${phone}?text=${encodeURIComponent(message)}`;

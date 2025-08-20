@@ -158,7 +158,7 @@ const AddService = () => {
 
   const sendWhatsappMessageToTechnician = () => {
   const phone = selectedTech?.MobileNumber;
-  const message = getWhatsAppMessage(selectedTech?.Name || '', selectedItem?.ItemName || '', ServiceStatusEnum.ACTIVE);
+  const message = getWhatsAppMessage(selectedTech?.Name || '', selectedItem?.ItemName || '', ServiceStatusEnum.ACTIVE, faultMessage || '');
 
   if (phone) {
     const url = `https://wa.me/91${phone}?text=${encodeURIComponent(message)}`;
